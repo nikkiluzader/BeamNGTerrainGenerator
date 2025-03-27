@@ -1,0 +1,117 @@
+﻿<Window x:Class="BeamNGTerrainGenerator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BeamNGTerrainGenerator"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:helix="http://helix-toolkit.org/wpf"
+        mc:Ignorable="d"
+        Title="BeamNG Terrain Generator" Height="1200" Width="1600">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <!-- Left side: Map area -->
+            <ColumnDefinition Width="400" />
+            <!-- Right side: Controls -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Left side: Map Preview -->
+        <wv2:WebView2 x:Name="webViewMap" Grid.Column="0" />
+
+        <!-- Right side: Control panels -->
+        <StackPanel Grid.Column="1" Margin="10" VerticalAlignment="Top" Orientation="Vertical" >
+
+            <!-- Area Selection Controls -->
+            <GroupBox Header="Area Selection" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Latitude (Center):"/>
+                    <TextBox Name="txtLatitude" Margin="0,0,0,5"/>
+
+                    <TextBlock Text="Longitude (Center):"/>
+                    <TextBox Name="txtLongitude" Margin="0,0,0,5"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,5">
+                        <Label Content="Resolution:" VerticalAlignment="Center" />
+                        <ComboBox Name="ResolutionComboBox"
+                                  Width="100"
+                                  SelectedIndex="2"
+                                  SelectionChanged="ResolutionComboBox_SelectionChanged">
+                            <ComboBoxItem Content="256" />
+                            <ComboBoxItem Content="512" />
+                            <ComboBoxItem Content="1024" />
+                            <ComboBoxItem Content="2048" />
+                            <ComboBoxItem Content="4096" />
+                            <ComboBoxItem Content="8192" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <TextBlock Name="HighResWarningText"
+                               Text="⚠️ Selecting 4096 or 8192 may cause high memory usage and slow processing."
+                               Foreground="OrangeRed" FontWeight="Bold"
+                               Visibility="Collapsed" Margin="5,2,0,0" TextWrapping="Wrap" />
+
+                    <Button Name="btnUpdateMap" Content="Update Map" Click="btnUpdateMap_Click" Margin="0,10,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Material Mapping Controls -->
+            <GroupBox Header="Material Mapping" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Custom material mapping will go here..." FontStyle="Italic"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Preset Profile Selector -->
+            <GroupBox Header="Preset Profiles" Margin="0,0,0,10">
+                <ComboBox Name="comboPresetProfiles" Margin="5">
+                    <ComboBoxItem Content="Forest" IsSelected="True"/>
+                    <ComboBoxItem Content="Urban"/>
+                    <ComboBoxItem Content="Desert"/>
+                    <ComboBoxItem Content="Custom"/>
+                </ComboBox>
+            </GroupBox>
+
+            <!-- Height Exaggeration Slider -->
+            <GroupBox Header="Height Exaggeration" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <Slider x:Name="heightScaleSlider" Minimum="0.01" Maximum="0.2" Value="0.02" TickFrequency="0.01" IsSnapToTickEnabled="True"/>
+                    <TextBlock Text="{Binding ElementName=heightScaleSlider, Path=Value, StringFormat='Scale: {0:F2}'}" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Preview Pane (2D & 3D visuals) -->
+            <GroupBox Header="Preview" Margin="0,0,0,10">
+                <StackPanel Margin="5">
+                    <!-- Satellite Image Preview -->
+                    <GroupBox Header="Satellite Image Preview" Height="250" Margin="0,0,0,5">
+                        <Grid>
+                            <Image Name="satellitePreview" Stretch="Uniform"/>
+                            <TextBlock Name="satelliteCoordsText" Background="#AA000000" Foreground="White" 
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                                       Margin="5" Padding="5"/>
+                        </Grid>
+                    </GroupBox>
+
+                    <!-- 3D Terrain Preview Pane -->
+                    <GroupBox Header="3D Terrain Preview" Height="300">
+                        <Grid>
+                            <helix:HelixViewport3D x:Name="terrainViewport">
+                                <helix:DefaultLights/>
+                            </helix:HelixViewport3D>
+                            <TextBlock Name="terrainCoordsText" Background="#AA000000" Foreground="White" 
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                                       Margin="5" Padding="5"/>
+                        </Grid>
+                    </GroupBox>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Export Button -->
+            <Button Name="btnExport" Content="Export to BeamNG" Click="btnExport_Click" Height="40" FontWeight="Bold"/>
+
+        </StackPanel>
+
+    </Grid>
+</Window>

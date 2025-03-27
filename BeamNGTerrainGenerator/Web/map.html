@@ -1,0 +1,101 @@
+﻿
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BeamNG Terrain Selector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        let areaSizeMeters = 1024;
+
+        const map = L.map('map', {
+            center: [35.58250, -111.63178],
+            zoom: 14,
+            maxZoom: 17 // Match OpenTopoMap's limit
+        });
+
+
+        const layers = {
+            "OpenTopoMap": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: '© OpenTopoMap'
+            }),
+            "ESRI Topo": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri'
+            }),
+            "OpenStreetMap": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }),
+            "Mapbox Satellite": L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibmlrbHV6IiwiYSI6ImNrZjF0ZDZ5aTFha3MzMG1ic3BvN3hxdXkifQ.Cj_SS8daXsIijQjJZYdk4Q', {
+                tileSize: 512,
+                zoomOffset: -1,
+                attribution: '© Mapbox',
+            })
+        };
+
+        layers["OpenTopoMap"].addTo(map);
+        L.control.layers(layers).addTo(map);
+
+        const marker = L.marker(map.getCenter()).addTo(map);
+        let bboxLayer = null;
+
+        function updateBBox() {
+            const center = map.getCenter();
+            const lat = center.lat;
+            const lon = center.lng;
+
+            const metersPerDegLat = 111320;
+            const metersPerDegLon = 111320 * Math.cos(lat * Math.PI / 180);
+
+            const deltaLat = (areaSizeMeters / 2) / metersPerDegLat;
+            const deltaLon = (areaSizeMeters / 2) / metersPerDegLon;
+
+            const bounds = [
+                [lat - deltaLat, lon - deltaLon],
+                [lat + deltaLat, lon + deltaLon]
+            ];
+
+            if (bboxLayer) {
+                bboxLayer.setBounds(bounds);
+            } else {
+                bboxLayer = L.rectangle(bounds, { color: "#ff7800", weight: 1, fillOpacity: 0.3 }).addTo(map);
+            }
+
+            marker.setLatLng(center);
+
+            if (window.chrome?.webview) {
+                window.chrome.webview.postMessage({ latitude: lat, longitude: lon });
+            }
+        }
+
+        map.on('move', updateBBox);
+        updateBBox();
+
+        if (window.chrome?.webview) {
+            window.chrome.webview.addEventListener('message', event => {
+                const data = event.data;
+                if (data.areaSize) {
+                    areaSizeMeters = data.areaSize;
+                    updateBBox();
+                }
+            });
+        }
+
+        // Optional: add search bar (geocoder)
+        L.Control.geocoder().addTo(map);
+    </script>
+</body>
+</html>
