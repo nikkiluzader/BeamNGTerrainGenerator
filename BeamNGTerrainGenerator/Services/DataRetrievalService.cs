@@ -22,7 +22,7 @@ namespace BeamNGTerrainGenerator.Services
         }
 
         // Fetch DEM from OpenTopography with 20% extra margin
-        public async Task<byte[]?> FetchDEMAsync(double latitude, double longitude, int resolution, string apiKey)
+        public async Task<byte[]> FetchDEMAsync(double latitude, double longitude, int resolution, string apiKey)
         {
             double halfSizeMeters = resolution / 2.0 * 1.2;
             double latDeg = halfSizeMeters / 111320.0;
@@ -35,21 +35,13 @@ namespace BeamNGTerrainGenerator.Services
 
             string demUrl = $"https://portal.opentopography.org/API/usgsdem?datasetName=USGS1m&west={minLon}&south={minLat}&east={maxLon}&north={maxLat}&outputFormat=GTiff&API_Key={apiKey}";
 
-            try
-            {
-                var response = await _httpClient.GetAsync(demUrl);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsByteArrayAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"DEM fetch error: {ex.Message}");
-                return null;
-            }
+            var response = await _httpClient.GetAsync(demUrl);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
         }
 
         // Fetch Satellite Imagery from Mapbox with extra margin
-        public async Task<byte[]?> FetchSatelliteImageryAsync(double latitude, double longitude, int resolution, string mapboxToken)
+        public async Task<byte[]> FetchSatelliteImageryAsync(double latitude, double longitude, int resolution, string mapboxToken)
         {
             double halfSizeMeters = resolution / 2.0 * 1.2;
             double latDeg = halfSizeMeters / 111320.0;
@@ -66,17 +58,9 @@ namespace BeamNGTerrainGenerator.Services
 
             string imageryUrl = $"https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/{bbox}/{imgSize}x{imgSize}?access_token={mapboxToken}";
 
-            try
-            {
-                var response = await _httpClient.GetAsync(imageryUrl);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsByteArrayAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Imagery fetch error: {ex.Message}");
-                return null;
-            }
+            var response = await _httpClient.GetAsync(imageryUrl);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
         }
 
         public Dataset LoadDemDataset(byte[] demData)

@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="GDAL" Version="3.10.0" />
     <PackageReference Include="GDAL.Native" Version="3.10.0" />
+    <PackageReference Include="Grille.BeamNG.Lib" Version="0.3.2" />
     <PackageReference Include="HelixToolkit.Core.Wpf" Version="2.26.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

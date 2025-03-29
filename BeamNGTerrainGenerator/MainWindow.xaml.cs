@@ -16,15 +16,22 @@ using System.Windows.Media;
 using System.Collections.Generic;
 using System.Linq;
 using SixLabors.ImageSharp.Processing;
+using Grille.BeamNG.IO.Text;
+using BeamNGTerrainGenerator.BeamNG;
+using BeamNGTerrainGenerator.Utilities;
+
+using Image = SixLabors.ImageSharp.Image;
 
 namespace BeamNGTerrainGenerator
 {
     public partial class MainWindow : Window
     {
+        private ConfigFile config;
         private DataRetrievalService _dataService;
         private float[,] _latestHeightmap;
         private int _selectedResolution;
-        private Image<Rgba32> satelliteImage;
+
+        LevelExporter _level;
 
         public MainWindow()
         {
@@ -33,7 +40,30 @@ namespace BeamNGTerrainGenerator
             heightScaleSlider.ValueChanged += HeightScaleSlider_ValueChanged;
             ResolutionComboBox.SelectionChanged += ResolutionComboBox_SelectionChanged;
 
+            _level = new LevelExporter();
             _dataService = new DataRetrievalService();
+
+
+            config = ConfigFile.LoadDefault();
+            if (config.PathDefaultHeightmap.Exists)
+            {
+                ExceptionBox.Try(() =>
+                {
+                    _level.Height.Image = SixLabors.ImageSharp.Image.Load(config.PathDefaultHeightmap).CloneAs<L16>();
+                });
+            }
+            if (config.PathDefaultColormap.Exists)
+            {
+                ExceptionBox.Try(() =>
+                {
+                    _level.Color.Image = SixLabors.ImageSharp.Image.Load(config.PathDefaultColormap).CloneAs<Rgba32>();
+                });
+            }
+            if (config.TemplateMaterial.Exists)
+            {
+                _level.TemplateMaterial = new Grille.BeamNG.SceneTree.Art.TerrainMaterial(config.TemplateMaterial);
+            }
+
 
             Loaded += MainWindow_Loaded;
         }
@@ -352,63 +382,82 @@ namespace BeamNGTerrainGenerator
 
         private async void btnUpdateMap_Click(object sender, RoutedEventArgs e)
         {
+            await TryUpdateMap();
+        }
+
+        async Task TryUpdateMap()
+        {
+            try
+            {
+                await UpdateMap();
+
+            }
+            catch (Exception ex)
+            {
+                ExceptionBox.Show(ex);
+            }
+        }
+
+        async Task UpdateMap()
+        {
             double lat = double.Parse(txtLatitude.Text);
             double lon = double.Parse(txtLongitude.Text);
 
-            string openTopoKey = "";
-            string mapboxToken = "";
+            string openTopoKey = config.ApiKeyOpenTopography;
+            string mapboxToken = config.ApiKeyMapbox;
 
             var demData = await _dataService.FetchDEMAsync(lat, lon, _selectedResolution, openTopoKey);
             var imageryData = await _dataService.FetchSatelliteImageryAsync(lat, lon, _selectedResolution, mapboxToken);
 
-            if (demData != null && imageryData != null)
-            {
-                var demDataset = _dataService.LoadDemDataset(demData);
-                _latestHeightmap = _dataService.GetHeightmapFromDataset(demDataset, _selectedResolution);
-                RenderHeightmap3D(_latestHeightmap, heightScaleSlider.Value);
-                terrainCoordsText.Text = $"Terrain Center:\nLat: {lat:F6}, Lon: {lon:F6}";
+            var demDataset = _dataService.LoadDemDataset(demData);
+            _latestHeightmap = _dataService.GetHeightmapFromDataset(demDataset, _selectedResolution);
+            RenderHeightmap3D(_latestHeightmap, heightScaleSlider.Value);
+            terrainCoordsText.Text = $"Terrain Center:\nLat: {lat:F6}, Lon: {lon:F6}";
 
-                satelliteImage = _dataService.LoadSatelliteImage(imageryData);
-                satellitePreview.Source = ConvertToBitmapImage(satelliteImage);
+            _level.Color.Image = _dataService.LoadSatelliteImage(imageryData);
+            satellitePreview.Source = ConvertToBitmapImage(_level.Color.Image);
 
-                // ✅ Extract palette colors for material generation step
-                var palette = ExtractPalette(satelliteImage);
-                // TODO: use this in material generation logic
-                // GenerateMaterialsFromPalette(palette, @"C:\Temp\BeamNGExportTest");
+            // ✅ Extract palette colors for material generation step
+            var palette = ExtractPalette(_level.Color.Image);
+            // TODO: use this in material generation logic
+            // GenerateMaterialsFromPalette(palette, @"C:\Temp\BeamNGExportTest");
 
-                _dataService.DisposeDataset(demDataset);
-            }
-            else
-            {
-                MessageBox.Show("Error retrieving data from APIs.");
-            }
+            _dataService.DisposeDataset(demDataset);
         }
 
         private void btnExport_Click(object sender, RoutedEventArgs e) 
         {
-            string exportDir = @"C:\Temp\BeamNGExportTest"; // Later this can be dynamic
-
             // 1. Normalize the heightmap
-            ushort[,] normalizedHeights = NormalizeHeightmap(_latestHeightmap);
+            //ushort[,] normalizedHeights = NormalizeHeightmap(_latestHeightmap);
 
             // 2. Regenerate palette from satellite image if not cached
-            var palette = ExtractPalette(satelliteImage); // Reuse satelliteImage from earlier step
 
-            // 3. Generate layer map
-            byte[,] layerMap = GenerateLayerMap(satelliteImage, palette);
+            _level.Namespace = "BeamNGExportTest";
+            _level.Info.Title.Value = "YourMap";
 
-            // 4. Create list of material names
-            var materialNames = palette.Select((c, i) => $"generated_{i}").ToList();
+            // TODO:
+            // Submit Normalized-Height and Material-Layer Image data to LevelExporter
 
-            // 5. Write .ter file
-            string terPath = Path.Combine(exportDir, "YourMap.ter");
-            WriteTerFile(terPath, normalizedHeights, layerMap, materialNames);
+            if (_level.Color.Image != null)
+            {
+                var palette = ExtractPalette(_level.Color.Image); // Reuse satelliteImage from earlier step
 
-            // 6. Generate materials and textures
-            GenerateMaterialsFromPalette(palette, exportDir);
+                // 3. Generate layer map
+                byte[,] layerMap = GenerateLayerMap(_level.Color.Image, palette);
 
-            // 7. Write JSON files
-            WriteJsonFiles(exportDir, "YourMap", _selectedResolution, materialNames);
+                // 4. Create list of material names
+                _level.TerrainInfo.MaterialNames = palette.Select((c, i) => $"generated_{i}").ToList();
+            }
+            else
+            {
+                _level.Material.Image = null;
+                _level.TerrainInfo.MaterialNames = ["Default"];
+            }
+
+            _level.TerrainInfo.Resolution = _selectedResolution;
+            _level.TerrainInfo.MaxHeight = 512; // Height Range
+            _level.BaseTextureSize = _selectedResolution;
+            _level.Save();
         }
 
     }
