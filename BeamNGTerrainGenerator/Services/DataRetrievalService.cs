@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using OSGeo.GDAL;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -33,7 +33,7 @@ namespace BeamNGTerrainGenerator.Services
             double minLon = longitude - lonDeg;
             double maxLon = longitude + lonDeg;
 
-            string demUrl = $"https://portal.opentopography.org/API/usgsdem?datasetName=USGS1m&west={minLon}&south={minLat}&east={maxLon}&north={maxLat}&outputFormat=GTiff&API_Key={apiKey}";
+            string demUrl = $"https://portal.opentopography.org/API/globaldem?demtype=SRTMGL1&west={minLon}&south={minLat}&east={maxLon}&north={maxLat}&outputFormat=GTiff&API_Key={apiKey}";
 
             var response = await _httpClient.GetAsync(demUrl);
             response.EnsureSuccessStatusCode();
