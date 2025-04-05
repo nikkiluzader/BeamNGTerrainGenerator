@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,6 +40,22 @@ internal class ConfigFile : JsonDictWrapper
                 using var stream = File.OpenRead(filename);
                 var dict = JsonDictSerializer.Deserialize(stream);
                 return new ConfigFile(dict);
+            }
+            else
+            {
+                // Create default config
+                var defaultConfig = new JsonDict
+                {
+                    ["LevelsPath"] = $@"C:\Users\{Environment.UserName}\AppData\Local\BeamNG.drive\0.35\levels",
+                    ["ApiKeyOpenTopography"] = "",
+                    ["ApiKeyMapbox"] = "",
+                };
+
+                // Save default config
+                using var stream = File.Create(filename);
+                JsonDictSerializer.Serialize(stream, defaultConfig);
+
+                return new ConfigFile(defaultConfig);
             }
         }
         catch (Exception e)
