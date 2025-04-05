@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using Microsoft.Web.WebView2.Core;
 using BeamNGTerrainGenerator.Services;
@@ -277,7 +277,7 @@ namespace BeamNGTerrainGenerator
             bw.Write((UInt32)width); // Terrain size (must be square)
 
             // Terrain settings (can be tuned later)
-            bw.Write(1024.0f); // terrainSize
+            bw.Write((float)_selectedResolution); // terrainSize
             bw.Write(1.0f);    // squareSize
             bw.Write(255.0f);  // heightScale
             bw.Write((UInt32)materialNames.Count); // number of materials
@@ -347,7 +347,7 @@ namespace BeamNGTerrainGenerator
             string terrainJsonPath = Path.Combine(exportDir, $"{mapName}.terrain.json");
             string mainLevelJsonPath = Path.Combine(exportDir, "main.level.json");
 
-            // 🧱 .terrain.json
+            //.terrain.json
             var terrainJson = new
             {
                 name = mapName,
@@ -357,7 +357,7 @@ namespace BeamNGTerrainGenerator
                 materials = materialNames
             };
 
-            // 🌍 main.level.json
+            // main.level.json
             var mainJson = new
             {
                 name = mapName,
@@ -382,7 +382,15 @@ namespace BeamNGTerrainGenerator
 
         private async void btnUpdateMap_Click(object sender, RoutedEventArgs e)
         {
-            await TryUpdateMap();
+            btnUpdateMap.IsEnabled = false;  // Disable the button
+            try 
+            {
+                await TryUpdateMap();
+            }
+            finally 
+            {
+                btnUpdateMap.IsEnabled = true;  // Re-enable the button when done
+            }
         }
 
         async Task TryUpdateMap()
@@ -390,7 +398,6 @@ namespace BeamNGTerrainGenerator
             try
             {
                 await UpdateMap();
-
             }
             catch (Exception ex)
             {
@@ -417,7 +424,7 @@ namespace BeamNGTerrainGenerator
             _level.Color.Image = _dataService.LoadSatelliteImage(imageryData);
             satellitePreview.Source = ConvertToBitmapImage(_level.Color.Image);
 
-            // ✅ Extract palette colors for material generation step
+            // Extract palette colors for material generation step
             var palette = ExtractPalette(_level.Color.Image);
             // TODO: use this in material generation logic
             // GenerateMaterialsFromPalette(palette, @"C:\Temp\BeamNGExportTest");
